@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Session Clock</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0f1117;
+      --surface:      #1a1d27;
+      --surface2:     #22263a;
+      --accent:       #5b8dee;
+      --accent-hover: #7aa3f5;
+      --danger:       #e05c5c;
+      --danger-hover: #f07070;
+      --text:         #e8eaf0;
+      --text-muted:   #7a7f9a;
+      --border:       #2d3150;
+      --green:        #4caf7d;
+      --radius:       12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem 4rem;
+    }
+
+    h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+    }
+
+    /* ── Timer card ─────────────────────────────── */
+    .timer-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem 3rem;
+      text-align: center;
+      width: 100%;
+      max-width: 440px;
+      margin-bottom: 1.25rem;
+    }
+
+    .timer-display {
+      font-size: 4.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+      transition: color 0.3s;
+    }
+
+    .timer-display.running { color: var(--green); }
+
+    .timer-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 2rem;
+      height: 1.1em;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 0.85rem 2.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s, transform 0.1s;
+      letter-spacing: 0.04em;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-start { background: var(--accent); color: #fff; }
+    .btn-start:hover { background: var(--accent-hover); }
+    .btn-stop  { background: var(--danger); color: #fff; }
+    .btn-stop:hover  { background: var(--danger-hover); }
+
+    /* ── Daily summary ──────────────────────────── */
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 2rem;
+      width: 100%;
+      max-width: 440px;
+      margin-bottom: 2.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .summary-block { flex: 1; }
+    .summary-block:last-child { text-align: right; }
+
+    .summary-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .summary-value {
+      font-size: 1.65rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .summary-divider {
+      width: 1px;
+      height: 3rem;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* ── Session log ────────────────────────────── */
+    .log-section {
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .log-section h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .date-group { margin-bottom: 1.25rem; }
+
+    .date-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 0.5rem 0;
+      user-select: none;
+    }
+
+    .date-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .chevron {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+    .chevron.open { transform: rotate(90deg); }
+
+    .date-title { font-size: 0.95rem; font-weight: 600; }
+    .date-title.today { color: var(--accent); }
+
+    .date-totals {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sessions-list {
+      display: none;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding: 0.3rem 0 0.25rem 1.1rem;
+    }
+    .sessions-list.open { display: flex; }
+
+    .session-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55rem 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .session-time  { color: var(--text-muted); white-space: nowrap; }
+    .session-dur   { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .session-delete {
+      background: none;
+      border: none;
+      color: var(--border);
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.18s;
+      flex-shrink: 0;
+    }
+    .session-delete:hover { color: var(--danger); }
+
+    .empty-state {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      text-align: center;
+      padding: 2rem 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⏱ Session Clock</h1>
+
+  <div class="timer-card">
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div class="timer-label"   id="timerLabel">Ready</div>
+    <button class="btn btn-start" id="sessionBtn" onclick="toggleSession()">Start Session</button>
+  </div>
+
+  <div class="summary-card">
+    <div class="summary-block">
+      <div class="summary-label">Today &mdash; HH:MM</div>
+      <div class="summary-value" id="todayHHMM">0:00</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-block">
+      <div class="summary-label">Today &mdash; Decimal</div>
+      <div class="summary-value" id="todayDecimal">0.00h</div>
+    </div>
+  </div>
+
+  <div class="log-section">
+    <h2>Session History</h2>
+    <div id="logContainer"></div>
+  </div>
+
+<script>
+  const STORAGE_KEY = 'sessionClock_v1';
+  const MAX_DAYS    = 14;
+
+  let sessionRunning = false;
+  let sessionStartTs = null;
+  let timerInterval  = null;
+
+  /* ── Storage ──────────────────────────────────── */
+
+  function loadData() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function saveData(sessions) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  }
+
+  function pruneOld(sessions) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - MAX_DAYS);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    return sessions.filter(s => s.date >= cutoffStr);
+  }
+
+  /* ── Helpers ──────────────────────────────────── */
+
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
+  function fHHMMSS(ms) {
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+  }
+
+  function fHHMM(ms) {
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}:${pad(m)}`;
+  }
+
+  function fDecimal(ms) {
+    return (ms / 3600000).toFixed(2) + 'h';
+  }
+
+  function fTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function fDateLabel(dateStr) {
+    const today = todayStr();
+    const yest  = new Date(); yest.setDate(yest.getDate() - 1);
+    const yStr  = yest.toISOString().slice(0, 10);
+    if (dateStr === today) return 'Today';
+    if (dateStr === yStr)  return 'Yesterday';
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  /* ── Session control ──────────────────────────── */
+
+  function toggleSession() {
+    sessionRunning ? endSession() : startSession();
+  }
+
+  function startSession() {
+    sessionRunning = true;
+    sessionStartTs = Date.now();
+
+    const btn = document.getElementById('sessionBtn');
+    btn.textContent = 'End Session';
+    btn.className   = 'btn btn-stop';
+
+    const display = document.getElementById('timerDisplay');
+    display.classList.add('running');
+    document.getElementById('timerLabel').textContent = 'Session in progress';
+
+    timerInterval = setInterval(() => {
+      const elapsed = Date.now() - sessionStartTs;
+      display.textContent = fHHMMSS(elapsed);
+      refreshTotals(elapsed);
+    }, 1000);
+  }
+
+  function endSession() {
+    const endTs      = Date.now();
+    const durationMs = endTs - sessionStartTs;
+
+    clearInterval(timerInterval);
+    timerInterval  = null;
+    sessionRunning = false;
+
+    const sessions = pruneOld(loadData());
+    sessions.push({ id: uid(), date: todayStr(), startTs: sessionStartTs, endTs, durationMs });
+    saveData(sessions);
+
+    const btn = document.getElementById('sessionBtn');
+    btn.textContent = 'Start Session';
+    btn.className   = 'btn btn-start';
+
+    const display = document.getElementById('timerDisplay');
+    display.classList.remove('running');
+    display.textContent = '00:00:00';
+    document.getElementById('timerLabel').textContent = 'Ready';
+
+    sessionStartTs = null;
+    renderAll();
+  }
+
+  function deleteSession(id) {
+    saveData(loadData().filter(s => s.id !== id));
+    renderAll();
+  }
+
+  /* ── Render ───────────────────────────────────── */
+
+  function refreshTotals(liveMs = 0) {
+    const today       = todayStr();
+    const completedMs = loadData()
+      .filter(s => s.date === today)
+      .reduce((sum, s) => sum + s.durationMs, 0);
+    const totalMs = completedMs + liveMs;
+    document.getElementById('todayHHMM').textContent    = fHHMM(totalMs);
+    document.getElementById('todayDecimal').textContent = fDecimal(totalMs);
+  }
+
+  function renderLog() {
+    const sessions = pruneOld(loadData());
+    const container = document.getElementById('logContainer');
+
+    if (!sessions.length) {
+      container.innerHTML = '<div class="empty-state">No sessions recorded yet.</div>';
+      return;
+    }
+
+    // group by date
+    const groups = {};
+    sessions.forEach(s => { (groups[s.date] = groups[s.date] || []).push(s); });
+    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+    const today = todayStr();
+
+    container.innerHTML = sortedDates.map(date => {
+      const list    = groups[date].sort((a, b) => a.startTs - b.startTs);
+      const totalMs = list.reduce((sum, s) => sum + s.durationMs, 0);
+      const isToday = date === today;
+
+      const items = list.map(s => `
+        <div class="session-item">
+          <span class="session-time">${fTime(s.startTs)} – ${fTime(s.endTs)}</span>
+          <span class="session-dur">${fHHMMSS(s.durationMs)}</span>
+          <button class="session-delete" onclick="deleteSession('${s.id}')" title="Remove">✕</button>
+        </div>`).join('');
+
+      return `
+        <div class="date-group">
+          <div class="date-header" onclick="toggleGroup(this)">
+            <div class="date-header-left">
+              <span class="chevron open">▶</span>
+              <span class="date-title${isToday ? ' today' : ''}">${fDateLabel(date)}</span>
+            </div>
+            <div class="date-totals">${fHHMM(totalMs)} &nbsp;·&nbsp; ${fDecimal(totalMs)}</div>
+          </div>
+          <div class="sessions-list open">${items}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleGroup(header) {
+    header.querySelector('.chevron').classList.toggle('open');
+    header.nextElementSibling.classList.toggle('open');
+  }
+
+  function renderAll() {
+    refreshTotals();
+    renderLog();
+  }
+
+  /* ── Init ─────────────────────────────────────── */
+  renderAll();
+</script>
+</body>
+</html>

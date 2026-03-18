@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welocalize Hours</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f0f; --surface: #181818; --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+      --text: #f0ede8; --muted: #888580;
+      --accent: #e8a04a; --accent-dim: rgba(232,160,74,0.12); --accent-border: rgba(232,160,74,0.3);
+      --green: #5db88a; --green-dim: rgba(93,184,138,0.1); --green-border: rgba(93,184,138,0.3);
+      --red: #e06060; --red-dim: rgba(224,96,96,0.1);
+      --blue: #6aabdf; --blue-dim: rgba(106,171,223,0.1); --blue-border: rgba(106,171,223,0.25);
+      --yellow: #d4c24a; --yellow-dim: rgba(212,194,74,0.1); --yellow-border: rgba(212,194,74,0.28);
+      --mono: 'JetBrains Mono', monospace; --sans: 'DM Sans', sans-serif;
+      --radius: 10px; --radius-lg: 16px;
+    }
+    html, body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 32px 20px 56px; }
+
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+    .header-left .date { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--mono); }
+    .header-left .title { font-size: 20px; font-weight: 500; color: var(--text); margin-top: 4px; }
+    .export-btn { font-family: var(--sans); font-size: 12px; color: var(--muted); background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 8px 16px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .export-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+    .project-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+    .project-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); white-space: nowrap; }
+    .project-code-display { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--blue); flex: 1; letter-spacing: 0.05em; cursor: pointer; padding: 6px 10px; background: var(--blue-dim); border: 0.5px solid var(--blue-border); border-radius: 7px; text-align: center; transition: background 0.15s; user-select: all; }
+    .project-code-display:hover { background: rgba(106,171,223,0.16); }
+    .project-code-display.empty { color: var(--muted); font-size: 12px; font-weight: 400; background: transparent; border-color: var(--border); cursor: default; }
+    .project-copy-btn { font-family: var(--sans); font-size: 12px; color: var(--blue); background: var(--blue-dim); border: 0.5px solid var(--blue-border); border-radius: 7px; padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: background 0.15s, opacity 0.15s; }
+    .project-copy-btn:hover { background: rgba(106,171,223,0.18); }
+    .project-copy-btn:disabled { opacity: 0.3; cursor: default; }
+    .project-edit-btn { font-family: var(--sans); font-size: 12px; color: var(--muted); background: none; border: 0.5px solid var(--border2); border-radius: 7px; padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: color 0.15s; }
+    .project-edit-btn:hover { color: var(--text); }
+    .copy-hint { font-size: 11px; color: var(--muted); font-family: var(--mono); white-space: nowrap; opacity: 0; transition: opacity 0.3s; }
+    .copy-hint.show { opacity: 1; }
+
+    .quickcopy-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 16px; }
+    .quickcopy-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); margin-bottom: 10px; }
+    .quickcopy-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .qc-btn { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--muted); background: none; border: 0.5px solid var(--border2); border-radius: 7px; padding: 6px 12px; cursor: pointer; white-space: nowrap; letter-spacing: 0.03em; transition: color 0.15s, border-color 0.15s, background 0.15s; }
+    .qc-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.04); }
+    .qc-btn.flashed { color: var(--green); border-color: var(--green-border); background: var(--green-dim); }
+
+    .timer-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 32px 24px 28px; margin-bottom: 16px; text-align: center; }
+    .timer-display { font-family: var(--mono); font-size: 58px; font-weight: 600; letter-spacing: 0.03em; color: var(--text); margin-bottom: 28px; transition: color 0.2s; }
+    .timer-display.running { color: var(--accent); }
+    .toggle-btn { font-family: var(--sans); font-size: 14px; font-weight: 500; border: none; border-radius: var(--radius); padding: 13px 44px; cursor: pointer; transition: transform 0.1s, opacity 0.15s; letter-spacing: 0.02em; }
+    .toggle-btn:active { transform: scale(0.97); }
+    .toggle-btn.start { background: var(--accent); color: #1a0f00; }
+    .toggle-btn.start:hover { opacity: 0.9; }
+    .toggle-btn.stop { background: var(--red-dim); color: var(--red); border: 0.5px solid rgba(224,96,96,0.25); }
+    .toggle-btn.stop:hover { background: rgba(224,96,96,0.15); }
+
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .stat-value { font-size: 18px; font-weight: 500; font-family: var(--mono); color: var(--text); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.accent { color: var(--accent); font-size: 20px; }
+    .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.2s; }
+    .status-dot.live { background: var(--green); box-shadow: 0 0 0 3px var(--green-dim); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+    .status-text { font-size: 13px; font-family: var(--sans); font-weight: 500; color: var(--text); margin-top: 2px; }
+
+    .pay-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 16px; }
+    .pay-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .pay-panel-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
+    .pay-period-range { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+    .pay-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .pay-row-item { background: var(--surface2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .pay-row-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); margin-bottom: 6px; }
+    .pay-row-value { font-size: 16px; font-weight: 500; font-family: var(--mono); color: var(--text); }
+    .pay-row-value.green { color: var(--green); }
+    .pay-row-value.accent { color: var(--accent); }
+    .pay-row-value.blue { color: var(--blue); }
+    .pay-row-value.warn { color: var(--yellow); }
+    .pay-row-value.danger { color: var(--red); }
+    .pay-row-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 3px; }
+    .cap-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--border); }
+    .cap-label { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+    .cap-edit-btn { font-family: var(--mono); font-size: 11px; color: var(--muted); background: none; border: 0.5px solid var(--border2); border-radius: 6px; padding: 4px 10px; cursor: pointer; transition: color 0.15s; }
+    .cap-edit-btn:hover { color: var(--text); }
+
+    .sessions-section { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 16px; }
+    .sessions-header { padding: 14px 18px; border-bottom: 0.5px solid var(--border); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
+    .session-list { max-height: 240px; overflow-y: auto; }
+    .session-list::-webkit-scrollbar { width: 4px; }
+    .session-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .session-item { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 13px 18px; border-bottom: 0.5px solid var(--border); align-items: center; font-family: var(--mono); font-size: 12px; }
+    .session-item:last-child { border-bottom: none; }
+    .session-num { color: var(--muted); }
+    .session-range { color: var(--muted); }
+    .session-duration { background: var(--accent-dim); border: 0.5px solid var(--accent-border); color: var(--accent); font-size: 11px; padding: 3px 10px; border-radius: 6px; white-space: nowrap; }
+    .empty-state { padding: 36px 18px; text-align: center; color: var(--muted); font-size: 13px; font-family: var(--mono); }
+
+    .archive-section { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .archive-header { padding: 14px 18px; border-bottom: 0.5px solid var(--border); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
+    .archive-period { border-bottom: 0.5px solid var(--border); }
+    .archive-period:last-child { border-bottom: none; }
+    .archive-period-header { padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; gap: 12px; }
+    .archive-period-header:hover { background: rgba(255,255,255,0.02); }
+    .archive-period-label { font-family: var(--mono); font-size: 12px; color: var(--text); white-space: nowrap; }
+    .archive-period-totals { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .archive-period-hms { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .archive-period-dec { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+    .archive-period-pay { font-family: var(--mono); font-size: 11px; color: var(--green); }
+    .archive-days { display: none; background: rgba(0,0,0,0.2); }
+    .archive-days.open { display: block; }
+    .archive-day { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 9px 24px; border-top: 0.5px solid var(--border); font-family: var(--mono); font-size: 11px; align-items: center; }
+    .archive-day-label { color: var(--muted); }
+    .archive-day-hms { color: var(--muted); }
+    .archive-day-dec { color: var(--accent); }
+    .archive-empty { padding: 24px 18px; text-align: center; color: var(--muted); font-size: 13px; font-family: var(--mono); }
+
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100; }
+    .modal-bg.open { display: flex; }
+    .modal { background: #1c1c1c; border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 28px 24px; width: 320px; }
+    .modal-title { font-size: 15px; font-weight: 500; margin-bottom: 16px; }
+    .modal input { width: 100%; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius); color: var(--text); font-family: var(--mono); font-size: 15px; padding: 10px 14px; letter-spacing: 0.05em; outline: none; margin-bottom: 16px; }
+    .modal input:focus { border-color: rgba(255,255,255,0.3); }
+    .modal-hint { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-cancel { font-family: var(--sans); font-size: 13px; color: var(--muted); background: none; border: 0.5px solid var(--border2); border-radius: 8px; padding: 8px 18px; cursor: pointer; }
+    .modal-cancel:hover { color: var(--text); }
+    .modal-save { font-family: var(--sans); font-size: 13px; font-weight: 500; color: #1a0f00; background: var(--accent); border: none; border-radius: 8px; padding: 8px 20px; cursor: pointer; }
+    .modal-save:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="date" id="dateLabel"></div>
+      <div class="title">Welocalize Hours</div>
+    </div>
+    <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+  </div>
+
+  <div class="project-card">
+    <div class="project-label">Project</div>
+    <div class="project-code-display empty" id="projectDisplay" onclick="copyCode()" title="Click to copy">—</div>
+    <span class="copy-hint" id="copyHint">copied!</span>
+    <button class="project-copy-btn" id="projectCopyBtn" onclick="copyCode()" disabled>Copy</button>
+    <button class="project-edit-btn" onclick="openModal('project')">Edit</button>
+  </div>
+
+  <div class="quickcopy-card">
+    <div class="quickcopy-label">Quick copy</div>
+    <div class="quickcopy-row">
+      <button class="qc-btn" onclick="quickCopy(this,'Information provided by TS is inherently and verifiably accurate.')">Accurate</button>
+      <button class="qc-btn" onclick="quickCopy(this,'Cannot confidently assess due to specificity/complexity of subject matter being discussed.')">Can't Confid.</button>
+      <button class="qc-btn" onclick="quickCopy(this,'No objectively evaluable claims made on the basis of fact are present within the TS.')">No Claims</button>
+    </div>
+  </div>
+
+  <div class="timer-card">
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <button class="toggle-btn start" id="toggleBtn" onclick="toggleTimer()">Start Session</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label"><span class="status-dot" id="statusDot"></span>Status</div>
+      <div class="status-text" id="statusVal">Idle</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Today (h:m:s)</div>
+      <div class="stat-value green" id="totalHMS">00:00:00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Today (decimal)</div>
+      <div class="stat-value accent" id="totalDecimal">0.00</div>
+    </div>
+  </div>
+
+  <div class="pay-panel">
+    <div class="pay-panel-header">
+      <div class="pay-panel-title">Pay period</div>
+      <div class="pay-period-range" id="payPeriodRange"></div>
+    </div>
+    <div class="pay-rows">
+      <div class="pay-row-item">
+        <div class="pay-row-label">This week logged</div>
+        <div class="pay-row-value green" id="weekLogged">0.00 h</div>
+        <div class="pay-row-sub" id="weekRemaining"></div>
+      </div>
+      <div class="pay-row-item">
+        <div class="pay-row-label">Period total</div>
+        <div class="pay-row-value accent" id="periodTotal">0.00 h</div>
+        <div class="pay-row-sub" id="periodHMS"></div>
+      </div>
+      <div class="pay-row-item">
+        <div class="pay-row-label">Week 1 total</div>
+        <div class="pay-row-value blue" id="week1Total">0.00 h</div>
+        <div class="pay-row-sub" id="week1Label"></div>
+      </div>
+      <div class="pay-row-item">
+        <div class="pay-row-label">Est. net pay</div>
+        <div class="pay-row-value green" id="netPay">$0.00</div>
+        <div class="pay-row-sub" id="netPaySub"></div>
+      </div>
+    </div>
+    <div class="cap-row">
+      <div class="cap-label">Weekly cap: <span id="capDisplay">29 hrs</span></div>
+      <button class="cap-edit-btn" onclick="openModal('cap')">Edit cap</button>
+    </div>
+  </div>
+
+  <div class="sessions-section">
+    <div class="sessions-header">Sessions — today</div>
+    <div class="session-list" id="sessionList">
+      <div class="empty-state" id="emptyState">No sessions yet</div>
+    </div>
+  </div>
+
+  <div style="height:16px;"></div>
+
+  <div class="archive-section">
+    <div class="archive-header">Pay period archive</div>
+    <div class="archive-list" id="archiveList">
+      <div class="archive-empty" id="archiveEmpty">No archived periods yet</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle"></div>
+    <input type="text" id="modalInput" autocomplete="off" />
+    <div class="modal-hint" id="modalHint"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-save" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_PREFIX = 'welo_day_';
+  const PROJECT_KEY    = 'welo_project_code';
+  const CAP_KEY        = 'welo_weekly_cap';
+  const ARCHIVE_KEY    = 'welo_period_archive';
+  const HOURLY_RATE    = 15;
+  const TAX_FACTOR     = 0.88;
+  const MAX_ARCHIVE    = 4;
+
+  // Pay period anchor: Mon Mar 9 2026 is a known period start
+  const ANCHOR_MS = new Date(2026, 2, 9, 0, 0, 0, 0).getTime();
+
+  function getCurrentPayPeriod(nowMs) {
+    const today = new Date(nowMs != null ? nowMs : Date.now());
+    today.setHours(0,0,0,0);
+    const diffDays = Math.floor((today.getTime() - ANCHOR_MS) / 86400000);
+    const pIdx = Math.floor(diffDays / 14);
+    const pStart = new Date(ANCHOR_MS + pIdx * 14 * 86400000);
+    const pEnd = new Date(pStart.getTime() + 13 * 86400000); pEnd.setHours(23,59,59,999);
+    const w1Start = pStart;
+    const w1End = new Date(pStart.getTime() + 6 * 86400000); w1End.setHours(23,59,59,999);
+    const w2Start = new Date(pStart.getTime() + 7 * 86400000);
+    const w2End = pEnd;
+    return { pStart, pEnd, w1Start, w1End, w2Start, w2End, pIdx };
+  }
+
+  function fmtDate(d) { return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
+  function periodLabel(pp) { return fmtDate(pp.pStart) + ' – ' + fmtDate(pp.pEnd); }
+
+  function todayKey() {
+    const d = new Date();
+    return STORAGE_PREFIX+d.getFullYear()+'_'+String(d.getMonth()+1).padStart(2,'0')+'_'+String(d.getDate()).padStart(2,'0');
+  }
+  function dateKeyFor(d) {
+    return STORAGE_PREFIX+d.getFullYear()+'_'+String(d.getMonth()+1).padStart(2,'0')+'_'+String(d.getDate()).padStart(2,'0');
+  }
+  function labelFor(d) { return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
+
+  function loadArchive() { try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY))||[]; } catch(e){return[];} }
+  function saveArchive(a) { try { localStorage.setItem(ARCHIVE_KEY,JSON.stringify(a)); } catch(e){} }
+
+  function archiveOldPeriods() {
+    const pp = getCurrentPayPeriod();
+    const archive = loadArchive();
+    const keys = [];
+    for (let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(STORAGE_PREFIX))keys.push(k);}
+    const periodMap = {};
+    keys.forEach(key=>{
+      const parts=key.replace(STORAGE_PREFIX,'').split('_').map(Number);
+      if(parts.length!==3)return;
+      const [y,mo,d]=parts;
+      const dayDate=new Date(y,mo-1,d);
+      const dayPP=getCurrentPayPeriod(dayDate.getTime());
+      if(dayPP.pIdx===pp.pIdx)return;
+      if(!periodMap[dayPP.pIdx])periodMap[dayPP.pIdx]={pp:dayPP,days:[]};
+      let data;try{data=JSON.parse(localStorage.getItem(key))||[];}catch(e){data=[];}
+      const total=data.reduce((a,s)=>a+s.dur,0);
+      if(total>0)periodMap[dayPP.pIdx].days.push({label:labelFor(dayDate),total});
+    });
+    let changed=false;
+    Object.values(periodMap).forEach(({pp:oldPP,days})=>{
+      if(archive.some(a=>a.pIdx===oldPP.pIdx)||!days.length)return;
+      days.sort((a,b)=>a.label.localeCompare(b.label));
+      archive.unshift({pIdx:oldPP.pIdx,label:periodLabel(oldPP),total:days.reduce((a,d)=>a+d.total,0),days});
+      changed=true;
+    });
+    if(changed){while(archive.length>MAX_ARCHIVE)archive.pop();saveArchive(archive);}
+  }
+
+  function pruneOldDayRecords() {
+    const cutoff=new Date();cutoff.setDate(cutoff.getDate()-70);
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k=localStorage.key(i);if(!k||!k.startsWith(STORAGE_PREFIX))continue;
+      const parts=k.replace(STORAGE_PREFIX,'').split('_');if(parts.length!==3)continue;
+      const [y,mo,d]=parts.map(Number);
+      if(new Date(y,mo-1,d)<cutoff)localStorage.removeItem(k);
+    }
+  }
+
+  function repairMidnightSessions() {
+    const keys=[];
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(STORAGE_PREFIX))keys.push(k);}
+    keys.forEach(key=>{
+      let data;try{data=JSON.parse(localStorage.getItem(key));}catch(e){return;}
+      if(!Array.isArray(data))return;
+      const parts=key.replace(STORAGE_PREFIX,'').split('_').map(Number);if(parts.length!==3)return;
+      const [y,mo,d]=parts;
+      const dayStart=new Date(y,mo-1,d,0,0,0,0).getTime();
+      const dayEnd=new Date(y,mo-1,d,23,59,59,999).getTime();
+      const clean=[];let changed=false;
+      data.forEach(s=>{
+        if(s.end>dayEnd&&s.start<=dayEnd){
+          changed=true;
+          const db=Math.floor((dayEnd+1-s.start)/1000);
+          if(db>0)clean.push({...s,end:dayEnd+1,dur:db});
+          const nk=dateKeyFor(new Date(y,mo-1,d+1));
+          const da=Math.floor((s.end-(dayEnd+1))/1000);
+          if(da>0){let nd;try{nd=JSON.parse(localStorage.getItem(nk))||[];}catch(e){nd=[];}
+            if(!nd.some(x=>x.start===(dayEnd+1)&&x.end===s.end)){nd.push({n:nd.length+1,start:dayEnd+1,end:s.end,dur:da});try{localStorage.setItem(nk,JSON.stringify(nd));}catch(e){}}
+          }
+        } else if(s.start<dayStart){changed=true;}
+        else{const cd=Math.floor((s.end-s.start)/1000);if(cd!==s.dur){clean.push({...s,dur:Math.max(0,cd)});changed=true;}else clean.push(s);}
+      });
+      if(changed){clean.forEach((s,i)=>{s.n=i+1;});try{localStorage.setItem(key,JSON.stringify(clean));}catch(e){}}
+    });
+  }
+
+  let sessions=[],running=false,startTime=null,tickInterval=null;
+
+  function loadToday(){try{const r=localStorage.getItem(todayKey());sessions=r?JSON.parse(r):[];}catch(e){sessions=[];}}
+  function saveToday(){try{localStorage.setItem(todayKey(),JSON.stringify(sessions));}catch(e){}}
+
+  function todayTotalSecs(){
+    let t=sessions.reduce((a,s)=>a+s.dur,0);
+    if(running&&startTime)t+=Math.floor((Date.now()-startTime)/1000);
+    return t;
+  }
+
+  function getSecsForDay(date){
+    const key=dateKeyFor(date);
+    if(key===todayKey())return todayTotalSecs();
+    try{const r=localStorage.getItem(key);if(!r)return 0;return JSON.parse(r).reduce((a,s)=>a+s.dur,0);}catch(e){return 0;}
+  }
+
+  function getPeriodTotals(){
+    const pp=getCurrentPayPeriod();
+    let w1=0,w2=0;
+    for(let i=0;i<7;i++){w1+=getSecsForDay(new Date(pp.w1Start.getTime()+i*86400000));}
+    for(let i=0;i<7;i++){w2+=getSecsForDay(new Date(pp.w2Start.getTime()+i*86400000));}
+    const today=new Date();today.setHours(0,0,0,0);
+    const inW1=today>=pp.w1Start&&today<=pp.w1End;
+    return{w1,w2,thisWeek:inW1?w1:w2,period:w1+w2,pp,inW1};
+  }
+
+  function getWeeklyCap(){const v=parseInt(localStorage.getItem(CAP_KEY));return(!isNaN(v)&&v>0)?v:29;}
+
+  function fmt(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+  function fmtDec(sec){return(sec/3600).toFixed(2);}
+  function fmtTime(ts){return new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
+  function fmtDur(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;if(h>0)return h+'h '+m+'m';if(m>0)return m+'m '+s+'s';return s+'s';}
+  function fmtMoney(n){return'$'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+
+  function updateTotal(){
+    const s=todayTotalSecs();
+    document.getElementById('totalHMS').textContent=fmt(s);
+    document.getElementById('totalDecimal').textContent=fmtDec(s);
+    renderPayPanel();
+  }
+
+  function renderPayPanel(){
+    const cap=getWeeklyCap();
+    const{w1,thisWeek,period,pp,inW1}=getPeriodTotals();
+    const capSecs=cap*3600;
+    const remain=Math.max(0,capSecs-thisWeek);
+    const wkHrs=thisWeek/3600;
+    const netPay=(period/3600)*HOURLY_RATE*TAX_FACTOR;
+
+    document.getElementById('payPeriodRange').textContent=periodLabel(pp);
+    document.getElementById('capDisplay').textContent=cap+' hrs';
+
+    const wkEl=document.getElementById('weekLogged');
+    wkEl.textContent=fmtDec(thisWeek)+' h';
+    wkEl.className='pay-row-value '+(wkHrs>=cap?'danger':wkHrs>=cap*0.85?'warn':'green');
+
+    const remEl=document.getElementById('weekRemaining');
+    if(thisWeek>=capSecs){remEl.textContent='cap reached';remEl.style.color='var(--red)';}
+    else{remEl.textContent=fmtDur(remain)+' remaining';remEl.style.color=remain<3600?'var(--yellow)':'var(--muted)';}
+
+    document.getElementById('periodTotal').textContent=fmtDec(period)+' h';
+    document.getElementById('periodHMS').textContent=fmt(period);
+    document.getElementById('week1Total').textContent=fmtDec(w1)+' h';
+    document.getElementById('week1Label').textContent=fmtDate(pp.w1Start)+'–'+fmtDate(pp.w1End);
+    document.getElementById('netPay').textContent=fmtMoney(netPay);
+    document.getElementById('netPaySub').textContent=fmtDec(period)+'h × $'+HOURLY_RATE+' × '+TAX_FACTOR;
+  }
+
+  function renderSessions(){
+    const list=document.getElementById('sessionList');
+    const empty=document.getElementById('emptyState');
+    list.querySelectorAll('.session-item').forEach(el=>el.remove());
+    if(!sessions.length){empty.style.display='block';return;}
+    empty.style.display='none';
+    [...sessions].reverse().forEach(s=>{
+      const div=document.createElement('div');div.className='session-item';
+      div.innerHTML='<span class="session-num">#'+s.n+'</span><span class="session-range">'+fmtTime(s.start)+' → '+fmtTime(s.end)+'</span><span class="session-duration">'+fmtDur(s.dur)+'</span>';
+      list.appendChild(div);
+    });
+  }
+
+  function renderArchive(){
+    const list=document.getElementById('archiveList');
+    const empty=document.getElementById('archiveEmpty');
+    list.querySelectorAll('.archive-period').forEach(el=>el.remove());
+    const archive=loadArchive();
+    if(!archive.length){empty.style.display='block';return;}
+    empty.style.display='none';
+    archive.forEach((period,idx)=>{
+      const netPay=(period.total/3600)*HOURLY_RATE*TAX_FACTOR;
+      const wrap=document.createElement('div');wrap.className='archive-period';
+      wrap.innerHTML=
+        '<div class="archive-period-header" onclick="toggleArchivePeriod('+idx+')">'+
+          '<span class="archive-period-label">'+period.label+'</span>'+
+          '<div class="archive-period-totals">'+
+            '<span class="archive-period-hms">'+fmt(period.total)+'</span>'+
+            '<span class="archive-period-dec">'+fmtDec(period.total)+' h</span>'+
+            '<span class="archive-period-pay">'+fmtMoney(netPay)+'</span>'+
+          '</div>'+
+        '</div>'+
+        '<div class="archive-days" id="archiveDays_'+idx+'">'+
+          period.days.map(d=>'<div class="archive-day"><span class="archive-day-label">'+d.label+'</span><span class="archive-day-hms">'+fmt(d.total)+'</span><span class="archive-day-dec">'+fmtDec(d.total)+' h</span></div>').join('')+
+        '</div>';
+      list.appendChild(wrap);
+    });
+  }
+
+  function toggleArchivePeriod(idx){
+    const el=document.getElementById('archiveDays_'+idx);
+    if(el)el.classList.toggle('open');
+  }
+
+  function toggleTimer(){
+    const btn=document.getElementById('toggleBtn');
+    const disp=document.getElementById('timerDisplay');
+    const dot=document.getElementById('statusDot');
+    const sv=document.getElementById('statusVal');
+    if(!running){
+      startTime=Date.now();running=true;
+      tickInterval=setInterval(()=>{
+        const now=Date.now();
+        const sd=new Date(startTime),nd=new Date(now);
+        if(sd.getDate()!==nd.getDate()||sd.getMonth()!==nd.getMonth()||sd.getFullYear()!==nd.getFullYear()){
+          const midnight=new Date(nd.getFullYear(),nd.getMonth(),nd.getDate(),0,0,0,0).getTime();
+          const db=Math.floor((midnight-startTime)/1000);
+          if(db>0){sessions.push({n:sessions.length+1,start:startTime,end:midnight,dur:db});saveToday();}
+          sessions=[];startTime=midnight;loadToday();renderSessions();renderPayPanel();setDateLabel();
+        }
+        disp.textContent=fmt(Math.floor((now-startTime)/1000));
+        updateTotal();
+      },1000);
+      btn.textContent='Stop Session';btn.className='toggle-btn stop';
+      disp.classList.add('running');dot.classList.add('live');sv.textContent='Recording';
+    } else {
+      clearInterval(tickInterval);
+      const end=Date.now(),dur=Math.floor((end-startTime)/1000);
+      if(dur>=1){sessions.push({n:sessions.length+1,start:startTime,end,dur});saveToday();}
+      running=false;startTime=null;
+      disp.textContent='00:00:00';disp.classList.remove('running');
+      dot.classList.remove('live');sv.textContent='Idle';
+      btn.textContent='Start Session';btn.className='toggle-btn start';
+      updateTotal();renderSessions();
+    }
+  }
+
+  function exportCSV(){
+    if(!sessions.length){alert('No sessions to export today.');return;}
+    const d=new Date();
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const code=localStorage.getItem(PROJECT_KEY)||'';
+    let csv='Session,Date,Project Code,Start,End,Duration (sec),Duration (readable)\n';
+    sessions.forEach(s=>{
+      const st=new Date(s.start).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      const en=new Date(s.end).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      csv+=s.n+','+ds+','+code+','+st+','+en+','+s.dur+','+fmtDur(s.dur)+'\n';
+    });
+    const total=sessions.reduce((a,s)=>a+s.dur,0);
+    csv+='TOTAL,'+ds+',,,,,'+fmtDur(total)+' / '+fmtDec(total)+'h\n';
+    const blob=new Blob([csv],{type:'text/csv'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='welocalize_'+ds+'.csv';a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function loadProjectCode(){
+    const code=localStorage.getItem(PROJECT_KEY);
+    const el=document.getElementById('projectDisplay');
+    const btn=document.getElementById('projectCopyBtn');
+    if(code){el.textContent=code;el.classList.remove('empty');el.title='Click to copy';el.style.cursor='pointer';btn.disabled=false;}
+    else{el.textContent='No code set — click Edit';el.classList.add('empty');el.title='';el.style.cursor='default';btn.disabled=true;}
+  }
+
+  function copyCode(){
+    const code=localStorage.getItem(PROJECT_KEY);if(!code)return;
+    navigator.clipboard.writeText(code).then(()=>{
+      const h=document.getElementById('copyHint');h.classList.add('show');setTimeout(()=>h.classList.remove('show'),1500);
+    });
+  }
+
+  function quickCopy(btn,text){
+    navigator.clipboard.writeText(text).then(()=>{btn.classList.add('flashed');setTimeout(()=>btn.classList.remove('flashed'),1200);});
+  }
+
+  let modalMode='';
+  function openModal(mode){
+    modalMode=mode;
+    const inp=document.getElementById('modalInput');
+    if(mode==='project'){
+      document.getElementById('modalTitle').textContent='Edit project code';
+      inp.value=localStorage.getItem(PROJECT_KEY)||'';inp.placeholder='e.g. WL-2026-Q2-001';
+      document.getElementById('modalHint').textContent='Saved until you update it. Click the code or Copy button to copy to clipboard.';
+    } else if(mode==='cap'){
+      document.getElementById('modalTitle').textContent='Edit weekly cap';
+      inp.value=getWeeklyCap();inp.placeholder='29';
+      document.getElementById('modalHint').textContent='Normally 29. Set to 40 during high-volume weeks. Max allowed: 40.';
+    }
+    document.getElementById('modalBg').classList.add('open');
+    setTimeout(()=>inp.focus(),50);
+  }
+
+  function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+
+  function saveModal(){
+    const val=document.getElementById('modalInput').value.trim();
+    if(modalMode==='project'){
+      if(val)localStorage.setItem(PROJECT_KEY,val);else localStorage.removeItem(PROJECT_KEY);
+      loadProjectCode();
+    } else if(modalMode==='cap'){
+      const n=parseInt(val);
+      if(!isNaN(n)&&n>0&&n<=40)localStorage.setItem(CAP_KEY,String(n));
+      else if(!val)localStorage.removeItem(CAP_KEY);
+      renderPayPanel();
+    }
+    closeModal();
+  }
+
+  document.getElementById('modalBg').addEventListener('click',function(e){if(e.target===this)closeModal();});
+  document.getElementById('modalInput').addEventListener('keydown',function(e){if(e.key==='Enter')saveModal();if(e.key==='Escape')closeModal();});
+
+  function setDateLabel(){
+    document.getElementById('dateLabel').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  }
+
+  // one-time data corrections
+  (function(){
+    if(localStorage.getItem('welo_corrected_v1'))return;
+    const ms=new Date(2026,2,16,9,0,0).getTime();
+    localStorage.setItem('welo_day_2026_03_16',JSON.stringify([{n:1,start:ms,end:ms+5076000,dur:5076}]));
+    localStorage.setItem('welo_day_2026_03_17',JSON.stringify([]));
+    localStorage.setItem('welo_corrected_v1','1');
+  })();
+
+  (function(){
+    if(localStorage.getItem('welo_corrected_v2'))return;
+    const ts=new Date(2026,2,17,20,24,29).getTime();
+    localStorage.setItem('welo_day_2026_03_17',JSON.stringify([{n:1,start:ts,end:ts+9215000,dur:9215}]));
+    localStorage.setItem('welo_corrected_v2','1');
+  })();
+
+  // v3: Wed Mar 18 = 0.07h (252s)
+  (function(){
+    if(localStorage.getItem('welo_corrected_v3'))return;
+    const wed=new Date(2026,2,18,18,19,36).getTime();
+    localStorage.setItem('welo_day_2026_03_18',JSON.stringify([{n:1,start:wed,end:wed+252000,dur:252}]));
+    localStorage.setItem('welo_corrected_v3','1');
+  })();
+
+  // v4: correct Tue Mar 17 to 3.08h (11088s), Wed Mar 18 to 0.07h (252s)
+  (function(){
+    if(localStorage.getItem('welo_corrected_v4'))return;
+    const tue=new Date(2026,2,17,20,24,29).getTime();
+    localStorage.setItem('welo_day_2026_03_17',JSON.stringify([{n:1,start:tue,end:tue+11088000,dur:11088}]));
+    const wed=new Date(2026,2,18,18,19,36).getTime();
+    localStorage.setItem('welo_day_2026_03_18',JSON.stringify([{n:1,start:wed,end:wed+252000,dur:252}]));
+    localStorage.setItem('welo_corrected_v4','1');
+  })();
+
+  // init
+  pruneOldDayRecords();
+  repairMidnightSessions();
+  archiveOldPeriods();
+  loadToday();
+  loadProjectCode();
+  setDateLabel();
+  renderSessions();
+  renderPayPanel();
+  renderArchive();
+  updateTotal();
+</script>
+</body>
+</html>
